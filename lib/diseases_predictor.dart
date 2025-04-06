@@ -15,28 +15,36 @@ class DiseasePredictor {
   }
 
   /// Takes image path and prints prediction result
-  static Future<void> predict(String imagePath) async {
+  static Future<Map<String, String>> predict(String imagePath) async {
     try {
       final results = await Tflite.runModelOnImage(
         path: imagePath,
-        numResults: 2,            // ✅ Set to match your model's 2 output classes
+        numResults: 2, // ✅ Match your model's output classes
         threshold: 0.5,
-        imageMean: 0.0,           // Your model is scaled to [0, 1] (rescale=1./255)
-        imageStd: 1.0,            // Updated from 255.0 to 1.0 for proper normalization
+        imageMean: 0.0, // Scaled to [0, 1]
+        imageStd: 1.0,  // Correct for 1./255 normalization
       );
 
       if (results != null && results.isNotEmpty) {
         print("🧾 Prediction Result:");
-        for (var result in results) {
-          print("🔹 ${result['label']} - ${(result['confidence'] * 100).toStringAsFixed(2)}%");
-        }
+        final result = results.first; // take top result
+        print(
+          "🔹 ${result['label']} - ${(result['confidence'] * 100).toStringAsFixed(2)}%",
+        );
+        return {
+          "diseaseName": result['label'] ?? "Unknown",
+          "confidence": ((result['confidence'] ?? 0.0) * 100).toStringAsFixed(2)
+        };
       } else {
         print("❌ No prediction results.");
+        return {"error": "No prediction results"};
       }
     } catch (e) {
       print("❌ Error during prediction: $e");
+      return {"error": e.toString()};
     }
   }
+
 
   /// Optional: Close the model when done
   static Future<void> disposeModel() async {
